@@ -11,7 +11,7 @@ binding = "ASSETS"
 [[d1_databases]]
 binding = "DB"
 database_name = "wxchat"
-database_id = "b58dde57-d777-459f-a6b3-ae4de9c16368"
+database_id = "db2a9c2e-3758-42d6-a697-f99d1e290664"
 
 # R2 存储桶绑定
 [[r2_buckets]]
@@ -20,13 +20,12 @@ bucket_name = "wxchat"
 
 # 环境变量配置（用于鉴权）
 [vars]
-# 访问密码（明文，直接在Cloudflare Workers控制台配置）
-ACCESS_PASSWORD = "wxchat2024"
-# JWT密钥（用于会话管理）
-JWT_SECRET = "your-super-secret-jwt-key-change-this-in-production"
+# 访问密码（生产环境请修改为强密码）
+ACCESS_PASSWORD = "3zHb0d44eW^mzLj"
+# JWT密钥（生产环境请使用强随机密钥）
+JWT_SECRET = "lazily-plunder-overboard-washer-rants-lingo"
 # 会话过期时间（小时）
 SESSION_EXPIRE_HOURS = "24"
 # 最大登录尝试次数
 MAX_LOGIN_ATTEMPTS = "5"
-
 
