@@ -1112,11 +1112,9 @@
 }
 
 .copy-btn {
+  top: 2px;
+  right: 2px;
   position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 18px;
-  height: 18px;
   background: rgba(255, 255, 255, 0.8);
   border: none;
   border-radius: 50%;
@@ -1130,6 +1128,7 @@
   pointer-events: auto;
   user-select: none;
   z-index: 2;
+  padding: 0;
 }
 .copy-btn:hover {
   opacity: 1;
@@ -1140,4 +1139,41 @@
 }
 .message.own .copy-btn:hover {
   background: rgba(255, 255, 255, 0.5);
+}
+
+.global-notification {
+  position: fixed;
+  top: 40px;
+  left: 50%;
+  transform: translateX(-50%) scale(0.95);
+  min-width: 120px;
+  max-width: 80vw;
+  background: #333;
+  color: #fff;
+  padding: 12px 32px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  opacity: 0;
+  z-index: 9999;
+  pointer-events: none;
+  transition: opacity 0.3s, transform 0.3s;
+  text-align: center;
+}
+.global-notification.show {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+.global-notification-success {
+  background: #07c160;
+  color: #fff;
+}
+.global-notification-error {
+  background: #ff4d4f;
+  color: #fff;
+}
+.global-notification-info {
+  background: #333;
+  color: #fff;
 }

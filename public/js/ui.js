@@ -267,15 +267,15 @@ const UI = {
     const toggleButton = hasMarkdown
       ? `<button class="markdown-toggle" onclick="UI.toggleMarkdownView('${messageId}')" title="切换源码/渲染视图">📝</button>`
       : "";
-    // 新增复制按钮，直接插入 .message-content
-    const copyButton = `<button class="copy-btn" onclick="UI.copyMessageContent('${messageId}')" title="复制内容">📋</button>`;
+    // 复制按钮，和内容平级
+    const copyButton = `<button class=\"copy-btn\" onclick=\"UI.copyMessageContent('${messageId}')\" title=\"复制内容\">📋</button>`;
 
-    // 结构优化：内容在前，按钮在后，彻底消除空白
+    // 结构优化：内容和按钮平级，按钮贴在气泡右上角
     return `<div class="message-content">
         <div class="${textMessageClass}" id="${messageId}" data-original="${this.escapeHtml(
       message.content
     )}" data-rendered="${displayContent.replace(
-      /\"/g,
+      /"/g,
       "&quot;"
     )}" data-is-rendered="${hasMarkdown ? "true" : "false"}">
             ${displayContent}${toggleButton}
@@ -296,7 +296,7 @@ const UI = {
     if (navigator.clipboard) {
       navigator.clipboard.writeText(text).then(
         () => {
-          UI.showSuccess("已复制");
+          UI.showSuccess("复制成功");
         },
         () => {
           UI.showError("复制失败");
@@ -310,7 +310,7 @@ const UI = {
       textarea.select();
       try {
         document.execCommand("copy");
-        UI.showSuccess("已复制");
+        UI.showSuccess("复制成功");
       } catch (err) {
         UI.showError("复制失败");
       }

@@ -311,18 +311,26 @@ const Utils = {
     return element;
   },
 
-  // 显示通知 - 已禁用，避免移动端弹窗遮挡输入框
+  // 显示通知 - 页面弹窗提示
   showNotification(message, type = "info") {
-    // 只在控制台输出，不显示任何弹窗或通知
-    console.log(`[${type.toUpperCase()}] ${message}`);
+    // 移除已有提示
+    const old = document.querySelector(".global-notification");
+    if (old) old.remove();
 
-    // 所有通知功能已禁用，避免遮挡输入框
-    // if ('Notification' in window && Notification.permission === 'granted') {
-    //     new Notification('微信文件传输助手', {
-    //         body: message,
-    //         icon: '/favicon.ico'
-    //     });
-    // }
+    // 创建新提示
+    const div = document.createElement("div");
+    div.className = `global-notification global-notification-${type}`;
+    div.textContent = message;
+    document.body.appendChild(div);
+
+    // 居中显示动画
+    setTimeout(() => div.classList.add("show"), 50);
+
+    // 3秒后自动消失
+    setTimeout(() => {
+      div.classList.remove("show");
+      setTimeout(() => div.remove(), 300);
+    }, 3000);
   },
 
   // 请求通知权限
