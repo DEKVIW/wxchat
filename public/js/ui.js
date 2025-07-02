@@ -7,6 +7,9 @@ const UI = {
   // 消息缓存（用于增量更新）
   messageCache: new Map(),
 
+  // 记录上一次连接状态
+  _lastConnectionStatus: null,
+
   // 初始化UI
   init() {
     this.cacheElements();
@@ -789,8 +792,8 @@ const UI = {
     }
 
     const isOnline = status === "connected";
-
-    if (isOnline) {
+    // 只在状态变化时显示"已连接"
+    if (isOnline && UI._lastConnectionStatus !== "connected") {
       statusElement.textContent = "已连接";
       statusElement.className = "connection-status online";
       setTimeout(() => {
@@ -805,6 +808,8 @@ const UI = {
       statusElement.className = "connection-status offline";
       Utils.showNotification("网络已断开，已进入离线模式", "warning");
     }
+    // 记录本次状态
+    UI._lastConnectionStatus = status;
   },
 
   // 显示上传状态
@@ -1039,5 +1044,99 @@ const UI = {
   // 获取消息容器
   getMessageContainer() {
     return this.elements.messageList;
+  },
+
+  // 滑动确认弹窗
+  showSlideToConfirmModal({ title = "", message = "", onConfirm }) {
+    // 创建遮罩
+    const overlay = document.createElement("div");
+    overlay.className = "slide-confirm-overlay";
+    overlay.innerHTML = `
+      <div class="slide-confirm-modal">
+        <div class="slide-confirm-title">${title}</div>
+        <div class="slide-confirm-message">${message}</div>
+        <div class="slide-confirm-slider">
+          <div class="slide-confirm-track"></div>
+          <div class="slide-confirm-thumb"></div>
+          <span class="slide-confirm-label">滑动确认</span>
+        </div>
+        <button class="slide-confirm-cancel">取消</button>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    // 禁止页面滚动
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const slider = overlay.querySelector(".slide-confirm-slider");
+    const thumb = overlay.querySelector(".slide-confirm-thumb");
+    const label = overlay.querySelector(".slide-confirm-label");
+    const cancelBtn = overlay.querySelector(".slide-confirm-cancel");
+    let isDragging = false;
+    let startX = 0;
+    let currentX = 0;
+    let maxMove = slider.offsetWidth - thumb.offsetWidth - 4;
+
+    // 适配窗口变化
+    function updateMaxMove() {
+      maxMove = slider.offsetWidth - thumb.offsetWidth - 4;
+    }
+    window.addEventListener("resize", updateMaxMove);
+    setTimeout(updateMaxMove, 100);
+
+    function onDragStart(e) {
+      isDragging = true;
+      startX =
+        (e.touches ? e.touches[0].clientX : e.clientX) - thumb.offsetLeft;
+      thumb.classList.add("dragging");
+      // 拖动滑块时禁止页面滚动
+      document.body.style.overflow = "hidden";
+    }
+    function onDragMove(e) {
+      if (!isDragging) return;
+      currentX = (e.touches ? e.touches[0].clientX : e.clientX) - startX;
+      currentX = Math.max(0, Math.min(currentX, maxMove));
+      thumb.style.transform = `translateX(${currentX}px)`;
+      if (currentX > maxMove * 0.95) {
+        label.textContent = "松开确认";
+      } else {
+        label.textContent = "滑动确认";
+      }
+      // 拖动时阻止页面滚动
+      if (e.cancelable) e.preventDefault();
+    }
+    function onDragEnd() {
+      if (!isDragging) return;
+      isDragging = false;
+      thumb.classList.remove("dragging");
+      if (currentX > maxMove * 0.95) {
+        // 成功
+        thumb.style.transform = `translateX(${maxMove}px)`;
+        setTimeout(() => {
+          document.body.removeChild(overlay);
+          window.removeEventListener("resize", updateMaxMove);
+          document.body.style.overflow = prevOverflow;
+          onConfirm && onConfirm();
+        }, 200);
+      } else {
+        // 复位
+        thumb.style.transform = "translateX(0)";
+        label.textContent = "滑动确认";
+        // 拖动结束恢复页面滚动
+        document.body.style.overflow = prevOverflow;
+      }
+    }
+    // 事件绑定
+    thumb.addEventListener("mousedown", onDragStart);
+    thumb.addEventListener("touchstart", onDragStart);
+    document.addEventListener("mousemove", onDragMove);
+    document.addEventListener("touchmove", onDragMove, { passive: false });
+    document.addEventListener("mouseup", onDragEnd);
+    document.addEventListener("touchend", onDragEnd);
+    cancelBtn.onclick = () => {
+      document.body.removeChild(overlay);
+      window.removeEventListener("resize", updateMaxMove);
+      document.body.style.overflow = prevOverflow;
+    };
   },
 };

@@ -1177,3 +1177,149 @@
   background: #333;
   color: #fff;
 }
+
+/* 滑动确认弹窗样式 */
+.slide-confirm-overlay {
+  position: fixed;
+  z-index: 9999;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.slide-confirm-modal {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.12);
+  padding: 28px 20px 20px 20px;
+  min-width: 320px;
+  max-width: 90vw;
+  width: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: modalFadeScale 0.22s cubic-bezier(0.4, 1.4, 0.6, 1) both;
+}
+.slide-confirm-title {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 10px;
+  color: #222;
+}
+.slide-confirm-message {
+  font-size: 15px;
+  color: #666;
+  margin-bottom: 22px;
+  text-align: center;
+}
+.slide-confirm-slider {
+  position: relative;
+  width: 90%;
+  max-width: 320px;
+  height: 48px;
+  background: #f3f4f6;
+  border-radius: 24px;
+  margin-bottom: 18px;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+.slide-confirm-track {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: #e5e7eb;
+  border-radius: 24px;
+}
+.slide-confirm-thumb {
+  position: relative;
+  z-index: 2;
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(90deg, #10b981 60%, #34d399 100%);
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.08);
+  color: #fff;
+  font-size: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: box-shadow 0.2s, background 0.2s;
+  left: 2px;
+  top: 2px;
+  user-select: none;
+  /* 无箭头，纯圆形 */
+}
+.slide-confirm-thumb.dragging {
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.18);
+  background: linear-gradient(90deg, #059669 60%, #10b981 100%);
+}
+.slide-confirm-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  color: #10b981;
+  font-size: 16px;
+  font-weight: 500;
+  pointer-events: none;
+  justify-content: center;
+  text-align: center;
+}
+.slide-confirm-cancel {
+  margin-top: 6px;
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 15px;
+  cursor: pointer;
+  padding: 6px 0;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+.slide-confirm-cancel:hover {
+  background: #f3f4f6;
+}
+@media (max-width: 600px) {
+  .slide-confirm-modal {
+    min-width: 90vw;
+    width: 98vw;
+    padding: 18px 4vw 16px 4vw;
+  }
+  .slide-confirm-slider {
+    max-width: 98vw;
+    height: 44px;
+  }
+  .slide-confirm-title {
+    font-size: 18px;
+  }
+  .slide-confirm-message {
+    font-size: 14px;
+  }
+  .slide-confirm-label {
+    font-size: 15px;
+  }
+}
+
+/* 淡入缩放动画 */
+@keyframes modalFadeScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

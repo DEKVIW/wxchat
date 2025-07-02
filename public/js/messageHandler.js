@@ -20,6 +20,24 @@ const MessageHandler = {
   scrollDebounceTimer: null, // 防抖定时器
   isScrollListenerActive: false, // 滚动监听器是否激活
 
+  // 本地缓存相关
+  getLocalCache() {
+    try {
+      const cache = localStorage.getItem("wxchat_messages");
+      return cache ? JSON.parse(cache) : [];
+    } catch (e) {
+      return [];
+    }
+  },
+  setLocalCache(messages) {
+    try {
+      localStorage.setItem("wxchat_messages", JSON.stringify(messages));
+    } catch (e) {}
+  },
+  clearLocalCache() {
+    localStorage.removeItem("wxchat_messages");
+  },
+
   // 初始化消息处理
   init() {
     this.bindEvents();
@@ -93,47 +111,58 @@ const MessageHandler = {
     this.isLoading = true;
 
     try {
+      // 1. 优先渲染本地缓存
+      const localCache = this.getLocalCache();
+      const isFirstLoad = this.lastMessages.length === 0;
+      if (isFirstLoad && localCache.length > 0) {
+        UI.renderMessages(localCache, true);
+        this.lastMessages = [...localCache];
+        this.totalLoadedMessages = localCache.length;
+      }
+
+      // 2. 拉取后端最新消息
       const messages = await API.getMessages();
 
+      // 合并去重（以后端为准，避免本地脏数据）
+      const merged = this.mergeMessages(localCache, messages);
       // 检测消息变化
-      const hasChanges = this.detectMessageChanges(messages);
+      const hasChanges = this.detectMessageChanges(merged);
 
       // 总是更新UI，即使没有变化（首次加载时需要显示最终状态）
-      const isFirstLoad = this.lastMessages.length === 0;
       if (hasChanges || forceScroll || isFirstLoad) {
-        // 智能滚动逻辑：
-        // 1. 强制滚动时总是滚动
-        // 2. 有新消息且用户在底部时滚动
-        // 3. 初次加载时滚动
         const userAtBottom = UI.isAtBottom();
         const shouldScroll =
           forceScroll || (hasChanges && userAtBottom) || isFirstLoad;
-
-        UI.renderMessages(messages, shouldScroll);
-
-        // 更新缓存和分页状态
-        this.lastMessages = [...messages];
-        this.totalLoadedMessages = messages.length;
-
-        // 判断是否还有更多消息
-        this.hasMoreMessages = messages.length >= CONFIG.UI.MESSAGE_LOAD_LIMIT;
-
-        // 启动或停止无限滚动监听
+        UI.renderMessages(merged, shouldScroll);
+        this.lastMessages = [...merged];
+        this.totalLoadedMessages = merged.length;
+        this.hasMoreMessages = merged.length >= CONFIG.UI.MESSAGE_LOAD_LIMIT;
         this.updateInfiniteScrollState();
       }
+      // 3. 更新本地缓存
+      this.setLocalCache(merged);
     } catch (error) {
       console.error("加载消息失败:", error);
-
-      // 如果是首次加载失败，静默处理，显示空状态
       if (this.lastMessages.length === 0) {
         UI.showEmpty("还没有消息，开始聊天吧！");
       } else {
-        // 非首次加载失败时才显示错误提示
         UI.showError(error.message || CONFIG.ERRORS.LOAD_MESSAGES_FAILED);
       }
     } finally {
       this.isLoading = false;
     }
+  },
+
+  // 合并去重消息（以后端为准，避免本地脏数据）
+  mergeMessages(local, remote) {
+    if (!Array.isArray(local)) local = [];
+    if (!Array.isArray(remote)) remote = [];
+    const map = new Map();
+    [...local, ...remote].forEach((msg) => {
+      map.set(msg.id, msg);
+    });
+    // 以时间升序排列
+    return Array.from(map.values()).sort((a, b) => a.timestamp - b.timestamp);
   },
 
   // 初始化无限滚动
@@ -215,6 +244,10 @@ const MessageHandler = {
         // 更新缓存和状态
         this.lastMessages = allMessages;
         this.totalLoadedMessages += moreMessages.length;
+        // 合并并去重后写入本地缓存
+        this.setLocalCache(
+          this.mergeMessages(this.getLocalCache(), allMessages)
+        );
 
         // 判断是否还有更多消息
         this.hasMoreMessages =
@@ -357,8 +390,7 @@ const MessageHandler = {
         await this.loadMessages(true);
       }, 1500);
 
-      UI.showSuccess(CONFIG.SUCCESS.MESSAGE_SENT);
-      UI.setConnectionStatus("connected");
+      // UI.showSuccess(CONFIG.SUCCESS.MESSAGE_SENT); // 不再弹窗提示
     } catch (error) {
       console.error("发送消息失败:", error);
       UI.showError(error.message || CONFIG.ERRORS.MESSAGE_SEND_FAILED);
@@ -442,51 +474,44 @@ const MessageHandler = {
     // 清空输入框
     UI.clearInput();
 
-    // 显示确认对话框
-    const userConfirmed = confirm(CONFIG.CLEAR.CONFIRM_MESSAGE);
+    // 弹出滑动确认弹窗
+    UI.showSlideToConfirmModal({
+      title: "清空所有消息",
+      message: "请滑动滑块确认清空所有消息，操作不可撤销。",
+      onConfirm: async () => {
+        try {
+          UI.setSendButtonState(true, true);
+          UI.setConnectionStatus("connecting");
 
-    if (!userConfirmed) {
-      UI.showError(CONFIG.ERRORS.CLEAR_CANCELLED);
-      return;
-    }
+          // 执行清理操作
+          const result = await API.clearAllData("1234"); // 自动传递默认确认码
 
-    // 获取用户输入的确认码
-    const confirmCode = prompt("请输入确认码：");
+          // 清空前端界面
+          UI.showEmpty("数据已清空，开始新的聊天吧！");
+          this.lastMessages = [];
+          // 清空本地缓存
+          this.clearLocalCache();
 
-    if (confirmCode !== CONFIG.CLEAR.CONFIRM_CODE) {
-      UI.showError("确认码错误，数据清理已取消");
-      return;
-    }
+          // 显示清理结果
+          const resultMessage = `✅ 数据清理完成！\n\n📊 清理统计：\n• 删除消息：${
+            result.deletedMessages
+          } 条\n• 删除文件：${
+            result.deletedFiles
+          } 个\n• 释放空间：${Utils.formatFileSize(
+            result.deletedFileSize
+          )}\n• R2文件：${result.deletedR2Files} 个`;
 
-    try {
-      UI.setSendButtonState(true, true);
-      UI.setConnectionStatus("connecting");
-
-      // 执行清理操作
-      const result = await API.clearAllData(confirmCode);
-
-      // 清空前端界面
-      UI.showEmpty("数据已清空，开始新的聊天吧！");
-      this.lastMessages = [];
-
-      // 显示清理结果
-      const resultMessage = `✅ 数据清理完成！\n\n📊 清理统计：\n• 删除消息：${
-        result.deletedMessages
-      } 条\n• 删除文件：${
-        result.deletedFiles
-      } 个\n• 释放空间：${Utils.formatFileSize(
-        result.deletedFileSize
-      )}\n• R2文件：${result.deletedR2Files} 个`;
-
-      UI.showSuccess(resultMessage);
-      UI.setConnectionStatus("connected");
-    } catch (error) {
-      console.error("数据清理失败:", error);
-      UI.showError(error.message || CONFIG.ERRORS.CLEAR_FAILED);
-      UI.setConnectionStatus("disconnected");
-    } finally {
-      UI.setSendButtonState(false, false);
-    }
+          UI.showSuccess(resultMessage);
+          UI.setConnectionStatus("connected");
+        } catch (error) {
+          console.error("数据清理失败:", error);
+          UI.showError(error.message || CONFIG.ERRORS.CLEAR_FAILED);
+          UI.setConnectionStatus("disconnected");
+        } finally {
+          UI.setSendButtonState(false, false);
+        }
+      },
+    });
   },
 
   // 处理登出指令
@@ -670,7 +695,15 @@ const MessageHandler = {
 
   // 添加新消息到列表（用于实时更新）
   addNewMessage(message) {
+    // 合并到本地缓存
+    const localCache = this.getLocalCache();
+    const merged = this.mergeMessages(localCache, [message]);
+    this.setLocalCache(merged);
+    // 更新UI
     UI.addMessage(message);
+    // 更新内存缓存
+    this.lastMessages = merged;
+    this.totalLoadedMessages = merged.length;
   },
 
   // 清空所有消息
