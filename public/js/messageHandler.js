@@ -502,7 +502,6 @@ const MessageHandler = {
           )}\n• R2文件：${result.deletedR2Files} 个`;
 
           UI.showSuccess(resultMessage);
-          UI.setConnectionStatus("connected");
         } catch (error) {
           console.error("数据清理失败:", error);
           UI.showError(error.message || CONFIG.ERRORS.CLEAR_FAILED);
