@@ -76,11 +76,11 @@ const MessageHandler = {
 
       // 监听实时事件
       Realtime.on("connected", () => {
-        this.stopAutoRefresh();
+        this.stopAutoRefresh(); // 只要SSE连上就停轮询
       });
 
       Realtime.on("disconnected", () => {
-        this.startAutoRefresh();
+        this.startAutoRefresh(); // SSE断开才启用轮询
       });
 
       Realtime.on("newMessages", (data) => {

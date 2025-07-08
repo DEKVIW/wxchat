@@ -806,7 +806,7 @@ const UI = {
     } else if (status === "disconnected" || status === "offline") {
       statusElement.textContent = "离线模式";
       statusElement.className = "connection-status offline";
-      Utils.showNotification("网络已断开，已进入离线模式", "warning");
+      // Utils.showNotification("网络已断开，已进入离线模式", "warning"); // 已去除弹窗
     }
     // 记录本次状态
     UI._lastConnectionStatus = status;
